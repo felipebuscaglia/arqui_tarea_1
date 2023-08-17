@@ -13,9 +13,43 @@ services:
       - demo_01_service_01_mongodb_container:/data/db
     logging:
         driver: none
+        options:
+          loki-url: "http://localhost:3100/loki/api/v1/push"
+  loki:
+    image: grafana/loki:2.0.0
+    container_name: grafana-loki
+    command: -config.file=/mnt/config/loki-config.yml
+    restart: unless-stopped
+    volumes:
+      - ./loki-config.yml:/mnt/config/loki-config.yml
+      - loki-data:/loki
+    ports:
+      - 3100:3100
+    networks:
+      - default
+
+  grafana:
+    image: grafana/grafana:7.2.2
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - 3000:3000
+    networks:
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.loki.loadbalancer.server.port=3000
+      - traefik.http.routers.loki.rule=Host(`loki.example.com`)
+      - traefik.http.routers.loki.tls.certresolver=le
+      - traefik.http.routers.loki.entrypoints=websecure
+      - traefik.docker.network=traefik-proxy
 
 volumes:
   demo_01_service_01_mongodb_container:
+  grafana-data:
+  loki-data:
 
 networks:
   default:
